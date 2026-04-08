@@ -11,6 +11,7 @@ from _pydevd_bundle.pydevd_constants import (
 from _pydev_bundle import pydev_log
 from _pydev_bundle._pydev_saved_modules import threading
 from _pydev_bundle.pydev_is_thread_alive import is_thread_alive
+import warnings
 import weakref
 
 version = 11
@@ -179,7 +180,23 @@ class PyDBAdditionalThreadInfo(object):
         to avoid disturbing user code.
         """
         # sys._current_frames(): dictionary with thread id -> topmost frame
-        current_frames = _current_frames()
+        global _warned_current_frames_unavailable
+        try:
+            # GraalPy reports cross-thread frame inspection as a RuntimeWarning because
+            # the runtime cannot provide those frames. Our tests promote warnings to
+            # errors, so without this conversion-and-catch the debugger setup fails
+            # fatally instead of running with reduced thread inspection. The practical
+            # alternative is for GraalPy to support sys._current_frames() for other
+            # threads; until then, treating this capability as optional is the useful
+            # behavior.
+            with warnings.catch_warnings():
+                warnings.simplefilter("error", RuntimeWarning)
+                current_frames = _current_frames()
+        except Exception as exc:
+            if not _warned_current_frames_unavailable:
+                _warned_current_frames_unavailable = True
+                pydev_log.info("Unable to inspect frames of other threads in this runtime: %s", exc)
+            return None
         topmost_frame = current_frames.get(thread._ident)
         if topmost_frame is None:
             # Note: this is expected for dummy threads (so, getting the topmost frame should be
@@ -210,6 +227,10 @@ class PyDBAdditionalThreadInfo(object):
 
 _set_additional_thread_info_lock = ForkSafeLock()
 _next_additional_info = [PyDBAdditionalThreadInfo()]
+# Keep the reduced-capability log to one line. Without the latch GraalPy would flood the
+# debug logs with the same warning on every poll; the only useful alternative would be to
+# remove the log entirely, which makes the degraded behavior harder to diagnose.
+_warned_current_frames_unavailable = False
 
 
 # fmt: off

@@ -17,6 +17,11 @@ from pydevd_file_utils import absolute_path
 from debugpy.common.util import hide_debugpy_internals
 
 _tls = threading.local()
+# GraalPy lacks os.fork(), so the adapter process cannot perform the extra daemonizing
+# fork that CPython uses on POSIX. Without this check, debugpy.listen() crashes during
+# adapter startup; the realistic alternative is to keep the single spawned adapter
+# process alive instead of assuming a daemonized grandchild will appear.
+_CAN_DAEMONIZE = os.name == "posix" and hasattr(os, "fork")
 
 # TODO: "gevent", if possible.
 _config = {
@@ -218,15 +223,19 @@ def listen(address, settrace_kwargs, in_process_debug_adapter=False):
                 creationflags=creationflags,
                 env=python_env,
             )
-            if os.name == "posix":
+            if _CAN_DAEMONIZE:
                 # It's going to fork again to daemonize, so we need to wait on it to
-                # clean it up properly.
+                # clean it up properly. GraalPy cannot take this path because it cannot
+                # perform that extra fork; waiting there would just preserve the broken
+                # assumption that a daemonized grandchild exists.
                 _adapter_process.wait()
             else:
-                # Suppress misleading warning about child process still being alive when
-                # this process exits (https://bugs.python.org/issue38890).
-                _adapter_process.returncode = 0
-                pydevd.add_dont_terminate_child_pid(_adapter_process.pid)
+                if os.name != "posix":
+                    # Suppress misleading warning about child process still being alive
+                    # when this process exits
+                    # (https://bugs.python.org/issue38890).
+                    _adapter_process.returncode = 0
+                    pydevd.add_dont_terminate_child_pid(_adapter_process.pid)
         except Exception as exc:
             log.swallow_exception("Error spawning debug adapter:", level="info")
             raise RuntimeError("error spawning debug adapter: " + str(exc))

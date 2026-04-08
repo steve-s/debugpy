@@ -57,6 +57,7 @@ import sys
 
 import debugpy
 from debugpy.common import json, log
+import tests
 from tests import net, timeline
 from tests.debug import session
 from tests.patterns import some
@@ -135,7 +136,11 @@ def launch(session, target, console=None, cwd=None):
     if cwd is not None:
         config["cwd"] = cwd
     if "python" not in config and "pythonPath" not in config:
-        config["python"] = sys.executable
+        # GraalPy support is exercised by swapping only the debuggee interpreter. If we
+        # kept sys.executable here, launch-mode tests would keep spawning CPython and
+        # miss GraalPy-specific failures. The practical alternative is to set "python"
+        # explicitly in each GraalPy test case.
+        config["python"] = tests.get_debuggee_python()
 
     env = (
         session.spawn_adapter.env
