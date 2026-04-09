@@ -22,6 +22,9 @@ if sys.platform == "win32":
 process = None
 """subprocess.Popen instance for the debuggee process."""
 
+process_group_id = None
+"""POSIX process group ID for the debuggee tree, when launcher created one."""
+
 job_handle = None
 """On Windows, the handle for the job object to which the debuggee is assigned."""
 
@@ -48,6 +51,9 @@ def spawn(process_name, cmdline, env, redirect_output):
 
     close_fds = set()
     try:
+        global process_group_id
+        process_group_id = None
+
         if redirect_output:
             # subprocess.PIPE behavior can vary substantially depending on Python version
             # and platform; using our own pipes keeps it simple, predictable, and fast.
@@ -98,6 +104,8 @@ def spawn(process_name, cmdline, env, redirect_output):
             )
 
         log.info("Spawned {0}.", describe())
+        if sys.platform != "win32" and sys.implementation.name != "graalpy":
+            process_group_id = process.pid
 
         if sys.platform == "win32":
             # Assign the debuggee to a new job object, so that the launcher can kill
@@ -187,8 +195,14 @@ def kill():
                 # On Windows, kill the job object.
                 winapi.kernel32.TerminateJobObject(job_handle, 0)
             else:
-                # On POSIX, kill the debuggee's process group.
-                os.killpg(process.pid, signal.SIGKILL)
+                if process_group_id is not None:
+                    # When the launcher created a dedicated process group, kill the whole
+                    # debuggee tree.
+                    os.killpg(process_group_id, signal.SIGKILL)
+                else:
+                    # GraalPy launch skips preexec_fn, so there is no dedicated process
+                    # group to target.
+                    os.kill(process.pid, signal.SIGKILL)
     except Exception:
         log.swallow_exception("Failed to kill {0}", describe())
 
