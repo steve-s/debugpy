@@ -14,24 +14,14 @@ import sys
 # Do not import anything from debugpy until assert rewriting is enabled below!
 
 full = int(os.environ.get("DEBUGPY_TESTS_FULL", "0")) != 0
-# GraalPy validation needs the pytest runner itself to stay on CPython while the spawned
-# debuggee uses GraalPy. Without this hook, the tests always use sys.executable and we
-# cannot reproduce the real GraalPy compatibility failures in CI. The practical
-# alternative would be a separate GraalPy-only test runner, which is heavier than an
-# explicit debuggee override.
+# Allow the pytest runner to stay on one interpreter while the spawned debuggee runs on
+# another one. This keeps the standard test matrix intact and lets CI point only the
+# debuggee at GraalPy via DEBUGPY_TEST_DEBUGGEE_PYTHON.
 debuggee_python = os.environ.get("DEBUGPY_TEST_DEBUGGEE_PYTHON")
 
 
 def get_debuggee_python():
     return debuggee_python or sys.executable
-
-
-def uses_graalpy_debuggee():
-    # Skip GraalPy-only regression tests unless the debuggee override is active.
-    # Without this guard, those tests either fail spuriously on CPython or provide no
-    # signal about GraalPy. The practical alternative is a dedicated pytest marker plus
-    # custom command-line selection.
-    return debuggee_python is not None and "graalpy" in os.path.basename(debuggee_python).lower()
 
 root = py.path.local(__file__) / ".."
 

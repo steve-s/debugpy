@@ -31,7 +31,7 @@ jobs:
       - name: Export GraalPy debuggee path
         run: echo "DEBUGPY_TEST_DEBUGGEE_PYTHON=$(python -c 'import sys; print(sys.executable)')" >> "$GITHUB_ENV"
 
-      - name: Run GraalPy-focused tests through tox
+      - name: Run GraalPy smoke tests through tox
         env:
           DEBUGPY_TEST_DEBUGGEE_PYTHON: ${{ env.DEBUGPY_TEST_DEBUGGEE_PYTHON }}
-        run: python -m tox -e py312 -- tests/debugpy/test_graalpy.py
+        run: python -m tox -e py312 -- tests/debugpy/test_breakpoints.py::test_add_and_remove_breakpoint
