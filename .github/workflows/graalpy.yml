@@ -1,0 +1,37 @@
+name: GraalPy
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - release/*
+
+jobs:
+  tests-linux:
+    name: GraalPy 3.12 - Linux
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up GraalPy
+        uses: actions/setup-python@v5
+        with:
+          python-version: graalpy-24.0
+
+      - name: Show interpreter
+        run: python -c "import sys; print(sys.executable); print(sys.implementation.name); print(sys.version)"
+
+      - name: Bootstrap packaging tools
+        run: |
+          python -m ensurepip --upgrade
+          python -m pip install -U pip tox
+
+      - name: Export GraalPy debuggee path
+        run: echo "DEBUGPY_TEST_DEBUGGEE_PYTHON=$(python -c 'import sys; print(sys.executable)')" >> "$GITHUB_ENV"
+
+      - name: Run GraalPy-focused tests through tox
+        env:
+          DEBUGPY_TEST_DEBUGGEE_PYTHON: ${{ env.DEBUGPY_TEST_DEBUGGEE_PYTHON }}
+        run: python -m tox -e py312 -- tests/debugpy/test_graalpy.py
