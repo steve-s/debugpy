@@ -400,17 +400,10 @@ class Session(object):
             result.append(normalize(arg, strip_quotes=False))
         return result
 
-    def spawn_debuggee(self, args, cwd=None, exe=None, setup=None):
+    def spawn_debuggee(self, args, cwd=None, exe=sys.executable, setup=None):
         assert self.debuggee is None
         assert not len(self.captured_output - {"stdout", "stderr"})
 
-        if exe is None:
-            # Attach-style tests spawn the debuggee directly instead of going through a
-            # launch config, so they need the same GraalPy override here as launch-mode
-            # tests need in runners.py. Without it, attach regressions are silently
-            # exercised against CPython only. The practical alternative is to thread an
-            # explicit exe argument through every GraalPy test call site.
-            exe = tests.get_debuggee_python()
         args = self._make_python_cmdline(exe, *args)
         cwd = cwd.strpath if isinstance(cwd, py.path.local) else cwd
 

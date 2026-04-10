@@ -136,11 +136,7 @@ def launch(session, target, console=None, cwd=None):
     if cwd is not None:
         config["cwd"] = cwd
     if "python" not in config and "pythonPath" not in config:
-        # GraalPy support is exercised by swapping only the debuggee interpreter. If we
-        # kept sys.executable here, launch-mode tests would keep spawning CPython and
-        # miss GraalPy-specific failures. The practical alternative is to set "python"
-        # explicitly in each GraalPy test case.
-        config["python"] = tests.get_debuggee_python()
+        config["python"] = sys.executable
 
     env = (
         session.spawn_adapter.env

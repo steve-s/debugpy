@@ -9,19 +9,9 @@ import os
 import pkgutil
 import py
 import pytest
-import sys
-
 # Do not import anything from debugpy until assert rewriting is enabled below!
 
 full = int(os.environ.get("DEBUGPY_TESTS_FULL", "0")) != 0
-# Allow the pytest runner to stay on one interpreter while the spawned debuggee runs on
-# another one. This keeps the standard test matrix intact and lets CI point only the
-# debuggee at GraalPy via DEBUGPY_TEST_DEBUGGEE_PYTHON.
-debuggee_python = os.environ.get("DEBUGPY_TEST_DEBUGGEE_PYTHON")
-
-
-def get_debuggee_python():
-    return debuggee_python or sys.executable
 
 root = py.path.local(__file__) / ".."
 

@@ -28,13 +28,11 @@ jobs:
           python -m ensurepip --upgrade
           python -m pip install -U pip tox
 
-      - name: Export GraalPy debuggee path
-        run: echo "DEBUGPY_TEST_DEBUGGEE_PYTHON=$(python -c 'import sys; print(sys.executable)')" >> "$GITHUB_ENV"
+      - name: Select GraalPy for tox interpreter discovery
+        run: echo "TOX_DISCOVER=$(python -c 'import sys; print(sys.executable)')" >> "$GITHUB_ENV"
 
       - name: Run GraalPy smoke tests through tox
-        env:
-          DEBUGPY_TEST_DEBUGGEE_PYTHON: ${{ env.DEBUGPY_TEST_DEBUGGEE_PYTHON }}
-        run: python -m tox -e py312 -- tests/debugpy/test_breakpoints.py::test_add_and_remove_breakpoint
+        run: python -m tox --discover "${{ env.TOX_DISCOVER }}" -e py312 -- tests/debugpy/test_breakpoints.py::test_add_and_remove_breakpoint
 
       - name: Verify that the venv tox used is GraalPy
         run: .tox/py312/bin/python -c "import sys; print(sys.executable); print(sys.implementation.name); print(sys.version)"
