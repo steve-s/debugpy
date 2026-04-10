@@ -35,3 +35,6 @@ jobs:
         env:
           DEBUGPY_TEST_DEBUGGEE_PYTHON: ${{ env.DEBUGPY_TEST_DEBUGGEE_PYTHON }}
         run: python -m tox -e py312 -- tests/debugpy/test_breakpoints.py::test_add_and_remove_breakpoint
+
+      - name: Verify that the venv tox used is GraalPy
+        run: .tox/py312/bin/python -c "import sys; print(sys.executable); print(sys.implementation.name); print(sys.version)"
