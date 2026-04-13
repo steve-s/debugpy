@@ -29,7 +29,12 @@ jobs:
           python -m pip install -U pip "tox>=4,<5"
 
       - name: Run GraalPy smoke tests through tox
-        run: python -m tox run -x "testenv.base_python=$(python -c 'import sys; print(sys.executable)')" -e py312 -- tests/debugpy/test_breakpoints.py::test_add_and_remove_breakpoint
+        run: |
+          python -m tox run \
+            -x "tox.env_list=graalpy" \
+            -x "testenv.base_python=$(python -c 'import sys; print(sys.executable)')" \
+            -x "testenv.commands=python -Xfrozen_modules=off -m pytest {posargs}" \
+            -e graalpy -- tests/debugpy/test_breakpoints.py::test_add_and_remove_breakpoint
 
       - name: Verify that the venv tox used is GraalPy
-        run: .tox/py312/bin/python -c "import sys; print(sys.executable); print(sys.implementation.name); print(sys.version); assert sys.implementation.name == 'graalpy'"
+        run: .tox/graalpy/bin/python -c "import sys; print(sys.executable); print(sys.implementation.name); print(sys.version); assert sys.implementation.name == 'graalpy'"
