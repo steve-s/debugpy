@@ -26,15 +26,22 @@ jobs:
       - name: Bootstrap packaging tools
         run: |
           python -m ensurepip --upgrade
-          python -m pip install -U pip "tox>=4,<5"
+          python -m pip install -U pip
 
-      - name: Run GraalPy smoke tests through tox
+      - name: Create GraalPy venv
+        run: python -m venv .venv-graalpy
+
+      - name: Verify GraalPy venv
+        run: .venv-graalpy/bin/python -c "import sys; print(sys.executable); print(sys.implementation.name); print(sys.version); assert sys.implementation.name == 'graalpy'"
+
+      - name: Install GraalPy smoke test dependencies
         run: |
-          python -m tox run \
-            -x "tox.env_list=graalpy" \
-            -x "testenv.base_python=$(python -c 'import sys; print(sys.executable)')" \
-            -x "testenv.commands=python -Xfrozen_modules=off -m pytest {posargs}" \
-            -e graalpy -- tests/debugpy/test_breakpoints.py::test_add_and_remove_breakpoint
+          .venv-graalpy/bin/python -m pip install -U pip
+          .venv-graalpy/bin/python -m pip install -r tests/requirements-graalpy.txt
+          .venv-graalpy/bin/python -m pip install -e .
 
-      - name: Verify that the venv tox used is GraalPy
-        run: .tox/graalpy/bin/python -c "import sys; print(sys.executable); print(sys.implementation.name); print(sys.version); assert sys.implementation.name == 'graalpy'"
+      - name: Build pydevd attach binaries
+        run: .venv-graalpy/bin/python build_attach_binaries.py
+
+      - name: Run GraalPy smoke tests
+        run: .venv-graalpy/bin/python -Xfrozen_modules=off -m pytest tests/debugpy/test_breakpoints.py::test_add_and_remove_breakpoint

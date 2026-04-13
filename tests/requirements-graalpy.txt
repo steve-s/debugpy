@@ -1,0 +1,12 @@
+## Minimal dependencies for the GraalPy smoke test lane.
+
+## Used to run the tests:
+pytest
+pytest-xdist
+pytest-timeout
+
+## Used by test helpers:
+psutil
+
+## Used to build pydevd attach to process binaries:
+Cython
