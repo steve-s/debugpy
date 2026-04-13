@@ -26,13 +26,10 @@ jobs:
       - name: Bootstrap packaging tools
         run: |
           python -m ensurepip --upgrade
-          python -m pip install -U pip tox
-
-      - name: Select GraalPy for tox interpreter discovery
-        run: echo "TOX_DISCOVER=$(python -c 'import sys; print(sys.executable)')" >> "$GITHUB_ENV"
+          python -m pip install -U pip "tox>=4,<5"
 
       - name: Run GraalPy smoke tests through tox
-        run: python -m tox --discover "${{ env.TOX_DISCOVER }}" -e py312 -- tests/debugpy/test_breakpoints.py::test_add_and_remove_breakpoint
+        run: python -m tox run -x "testenv.base_python=$(python -c 'import sys; print(sys.executable)')" -e py312 -- tests/debugpy/test_breakpoints.py::test_add_and_remove_breakpoint
 
       - name: Verify that the venv tox used is GraalPy
-        run: .tox/py312/bin/python -c "import sys; print(sys.executable); print(sys.implementation.name); print(sys.version)"
+        run: .tox/py312/bin/python -c "import sys; print(sys.executable); print(sys.implementation.name); print(sys.version); assert sys.implementation.name == 'graalpy'"
