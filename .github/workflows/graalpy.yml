@@ -29,14 +29,16 @@ jobs:
           python -m pip install -U pip
 
       - name: Create GraalPy venv
-        run: python -m venv .venv-graalpy
+        run: python -m venv --without-pip .venv-graalpy
+
+      - name: Bootstrap pip in GraalPy venv
+        run: .venv-graalpy/bin/python -m ensurepip --upgrade
 
       - name: Verify GraalPy venv
         run: .venv-graalpy/bin/python -c "import sys; print(sys.executable); print(sys.implementation.name); print(sys.version); assert sys.implementation.name == 'graalpy'"
 
       - name: Install GraalPy smoke test dependencies
         run: |
-          .venv-graalpy/bin/python -m pip install -U pip
           .venv-graalpy/bin/python -m pip install -r tests/requirements-graalpy.txt
           .venv-graalpy/bin/python -m pip install -e .
 
