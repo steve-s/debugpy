@@ -18,7 +18,7 @@ jobs:
       - name: Set up GraalPy
         uses: actions/setup-python@v5
         with:
-          python-version: graalpy-25.1
+          python-version: graalpy25.1
           allow-prereleases: true
 
       - name: Show interpreter
