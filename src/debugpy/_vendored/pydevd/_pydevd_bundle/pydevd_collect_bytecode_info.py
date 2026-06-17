@@ -80,11 +80,26 @@ def debug(s):
 
 
 _Instruction = namedtuple("_Instruction", "opname, opcode, starts_line, argval, is_jump_target, offset, argrepr")
+# GraalPy currently raises NotImplementedError for dis.Bytecode(). pydevd uses this
+# helper opportunistically for return/exception analysis, so the correct behavior on
+# GraalPy is to degrade that feature once and continue. Without this guard, attach and
+# launch can fail with an uncaught exception; the only practical alternative is for
+# GraalPy to implement dis.Bytecode() compatibly.
+_warned_dis_unavailable = False
 
 
 def iter_instructions(co):
-    iter_in = dis.Bytecode(co)
-    iter_in = list(iter_in)
+    global _warned_dis_unavailable
+
+    try:
+        iter_in = list(dis.Bytecode(co))
+    except NotImplementedError:
+        if not _warned_dis_unavailable:
+            _warned_dis_unavailable = True
+            # Log once because this is a supported-but-reduced mode on GraalPy: the
+            # debugger stays usable, but bytecode-derived helpers are unavailable.
+            pydev_log.info("Bytecode inspection is unavailable in this runtime; disabling dis-based debugger helpers.")
+        return
 
     bytecode_to_instruction = {}
     for instruction in iter_in:

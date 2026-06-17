@@ -9,7 +9,6 @@ import os
 import pkgutil
 import py
 import pytest
-
 # Do not import anything from debugpy until assert rewriting is enabled below!
 
 full = int(os.environ.get("DEBUGPY_TESTS_FULL", "0")) != 0

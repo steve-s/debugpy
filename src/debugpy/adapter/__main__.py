@@ -12,6 +12,13 @@ import sys
 # WARNING: debugpy and submodules must not be imported on top level in this module,
 # and should be imported locally inside main() instead.
 
+# GraalPy can start POSIX child processes, but it does not implement os.fork(), so the
+# second half of the usual double-fork daemonization sequence is not available there.
+# Without this guard, adapter startup aborts with AttributeError on os.fork(), which is
+# fatal for listen()/launch scenarios. The practical alternative is to skip the second
+# fork and accept a single detached child when fork() is unavailable.
+_CAN_DAEMONIZE = os.name == "posix" and hasattr(os, "fork")
+
 
 def main():
     args = _parse_argv(sys.argv)
@@ -31,12 +38,16 @@ def main():
         if os.name == "posix":
             # On POSIX, we need to leave the process group and its session, and then
             # daemonize properly by double-forking (first fork already happened when
-            # this process was spawned).
+            # this process was spawned). Some POSIX runtimes, such as GraalPy, do not
+            # implement fork(), so in that case we settle for a single detached child.
+            # If we tried to preserve the original code path there, adapter startup
+            # would fail immediately. A full GraalPy fork() implementation would also
+            # solve this, but that is outside debugpy's control.
             # NOTE: if process is already the session leader, then
             # setsid would fail with `operation not permitted`
             if os.getsid(os.getpid()) != os.getpid():
                 os.setsid()
-            if os.fork() != 0:
+            if _CAN_DAEMONIZE and os.fork() != 0:
                 sys.exit(0)
 
         for stdio in sys.stdin, sys.stdout, sys.stderr:

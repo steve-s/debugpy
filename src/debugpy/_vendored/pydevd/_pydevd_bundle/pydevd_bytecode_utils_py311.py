@@ -27,12 +27,24 @@ def _is_inside(item_pos: _Pos, container_pos: _Pos):
 def _get_smart_step_into_targets(code):
     import linecache
     from .pydevd_bytecode_utils import Target
+    from _pydev_bundle import pydev_log
 
     filename = code.co_filename
 
     targets_root = []
     children = []
-    for instr in dis.Bytecode(code):
+    try:
+        # GraalPy does not implement dis.Bytecode(), so smart-step target discovery
+        # cannot be computed there. Leaving the original code in place causes a hard
+        # failure when the DAP client asks for step-into targets; the practical
+        # alternative is to return no smart-step targets and keep ordinary debugging
+        # working until GraalPy grows dis support.
+        instructions = dis.Bytecode(code)
+    except NotImplementedError:
+        pydev_log.info("Bytecode inspection is unavailable in this runtime; disabling smart step into targets.")
+        return []
+
+    for instr in instructions:
         if instr.opname == "LOAD_CONST":
             if isinstance(instr.argval, CodeType):
                 children.append(_get_smart_step_into_targets(instr.argval))

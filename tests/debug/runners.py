@@ -57,6 +57,7 @@ import sys
 
 import debugpy
 from debugpy.common import json, log
+import tests
 from tests import net, timeline
 from tests.debug import session
 from tests.patterns import some
